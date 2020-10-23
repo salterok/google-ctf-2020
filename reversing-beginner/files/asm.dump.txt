@@ -1,0 +1,51 @@
+
+./a.out:     file format elf64-x86-64
+
+0000000000001080 <main>:
+    1080:	41 54                	push   %r12
+    1082:	48 8d 3d 7b 0f 00 00 	lea    0xf7b(%rip),%rdi        # 2004 <_IO_stdin_used+0x4>
+    1089:	31 c0                	xor    %eax,%eax
+    108b:	55                   	push   %rbp
+    108c:	48 83 ec 28          	sub    $0x28,%rsp
+    1090:	e8 bb ff ff ff       	callq  1050 <printf@plt>
+    1095:	49 89 e4             	mov    %rsp,%r12
+    1098:	31 c0                	xor    %eax,%eax
+    109a:	48 8d 6c 24 10       	lea    0x10(%rsp),%rbp
+    109f:	4c 89 e6             	mov    %r12,%rsi
+    10a2:	48 8d 3d 62 0f 00 00 	lea    0xf62(%rip),%rdi        # 200b <_IO_stdin_used+0xb>
+    10a9:	e8 b2 ff ff ff       	callq  1060 <__isoc99_scanf@plt>
+    10ae:	66 0f 6f 04 24       	movdqa (%rsp),%xmm0
+    10b3:	48 89 ee             	mov    %rbp,%rsi
+    10b6:	4c 89 e7             	mov    %r12,%rdi
+    10b9:	ba 10 00 00 00       	mov    $0x10,%edx
+    10be:	66 0f 38 00 05 a9 2f 	pshufb 0x2fa9(%rip),%xmm0        # 4070 <SHUFFLE>
+    10c5:	00 00 
+    10c7:	66 0f fe 05 91 2f 00 	paddd  0x2f91(%rip),%xmm0        # 4060 <ADD32>
+    10ce:	00 
+    10cf:	66 0f ef 05 79 2f 00 	pxor   0x2f79(%rip),%xmm0        # 4050 <XOR>
+    10d6:	00 
+    10d7:	0f 29 44 24 10       	movaps %xmm0,0x10(%rsp)
+    10dc:	e8 4f ff ff ff       	callq  1030 <strncmp@plt>
+    10e1:	85 c0                	test   %eax,%eax
+    10e3:	75 1b                	jne    1100 <main+0x80>
+    10e5:	48 8b 35 94 2f 00 00 	mov    0x2f94(%rip),%rsi        # 4080 <EXPECTED_PREFIX>
+    10ec:	ba 04 00 00 00       	mov    $0x4,%edx
+    10f1:	48 89 ef             	mov    %rbp,%rdi
+    10f4:	e8 37 ff ff ff       	callq  1030 <strncmp@plt>
+    10f9:	41 89 c4             	mov    %eax,%r12d
+    10fc:	85 c0                	test   %eax,%eax
+    10fe:	74 1d                	je     111d <main+0x9d>
+    1100:	48 8d 3d 11 0f 00 00 	lea    0xf11(%rip),%rdi        # 2018 <_IO_stdin_used+0x18>
+    1107:	41 bc 01 00 00 00    	mov    $0x1,%r12d
+    110d:	e8 2e ff ff ff       	callq  1040 <puts@plt>
+    1112:	48 83 c4 28          	add    $0x28,%rsp
+    1116:	44 89 e0             	mov    %r12d,%eax
+    1119:	5d                   	pop    %rbp
+    111a:	41 5c                	pop    %r12
+    111c:	c3                   	retq   
+    111d:	48 8d 3d ec 0e 00 00 	lea    0xeec(%rip),%rdi        # 2010 <_IO_stdin_used+0x10>
+    1124:	e8 17 ff ff ff       	callq  1040 <puts@plt>
+    1129:	eb e7                	jmp    1112 <main+0x92>
+    112b:	0f 1f 44 00 00       	nopl   0x0(%rax,%rax,1)
+
+
