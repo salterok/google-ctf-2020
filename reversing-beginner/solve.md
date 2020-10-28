@@ -181,52 +181,150 @@ XOR: 76 58 B4 49 8D 1A 5F 38  D4 23 F8 34 EB 86 F9 AA
 RES: 43 54 46 7B 53 X5 X6 X7  66 30 72 4D 33 21 7D 00   
 ```
 We fully compute last half of the token, first half only has 3 unknowns left — `X5`, `X6` and `X7`. 
-`7D` + `FE` = `38` ^ `X7` = (`17B` & `FF`) = `7B`   
-`X7` = `43` => C    
-> NOTE: first overflow happens so we carry 1 to next column, also we mark every next column with `?` next to `ADD` value so that we know that such value may possible got also overflowed (this is just to self check and remove any uncertainty why constant expressions don't match). 
+
+And again i made a mistake by moving in wrong direction `right-to-left` when actually less significant bytes to the left side.
+
+You can review my false calculations in [fail #2](fail_path.md).
+
+> ! try to interpret bytes from left as least significant
+> second part of table has no overflow so we do not need to recalculate values
+> but first half has many overflows and order of bytes very important
+> as overflow caries to higher bytes
+
+First i want to check that right part of table (solved one) do not contradicts to itself.
+This time i will use some simple script to do this, cause my mind will blow otherwise :)
+
+I just copied right part and with simple text replacements made below js array
+```js
+[
+    [ 0x7B, 0x00, 0x53, 0x66, 0x72, 0x33, 0x21, 0x43 ],
+    [ 0x37, 0x13, 0x37, 0x13, 0x66, 0x74, 0x63, 0x67 ],
+    [ 0xD4, 0x23, 0xF8, 0x34, 0xEB, 0x86, 0xF9, 0xAA ],
+    [ 0x66, 0x30, 0x72, 0x4D, 0x33, 0x21, 0x7D, 0x00 ],
+]
 ```
-PRO: ++  ??  ??  ++  ??  ??  ?? ++  ++ ++ ++ ++ ++ ++ ++ ++   
-SRE: 46  X6  43  54  X5  4D  30 7D  7B 00 53 66 72 33 21 43   
-ADD: EF? BE? AD? DE? AD? DE? E2 FE  37 13 37 13 66 74 63 67   
-XOR: 76  58  B4  49  8D  1A  5F 38  D4 23 F8 34 EB 86 F9 AA   
-RES: 43  54  46  7B  53  X5  X6 43  66 30 72 4D 33 21 7D 00   
+Now execute following script to see that all rows draws `true`
+```js
+for (let i = 0; i < 8; i++) {
+    let afterSum = a[0][i] + a[1][i];
+    let afterXor = a[2][i] ^ a[3][i];
+    let ok = ((afterSum - afterXor) & 0xFF) === 0;
+    console.log(`${i+1}: ${ok}`);
+}
 ```
-`30` + `E2` = `5F` ^ `X6` = (`112` & `FF`) = `12`   
-`X6` = `4D` => M    
-Substitute `X6` in table in correct values in `ADD` due to overflow:    
+And they indeed in sync! Ok, so we now need to carefully look into solving left part of table `left-to-right` this time.
+
+---
+
 ```
-PRO: ++  ??  ??  ++  ??  ?? ++ ++  ++ ++ ++ ++ ++ ++ ++ ++   
-SRE: 46  4D  43  54  X5  4D 30 7D  7B 00 53 66 72 33 21 43   
-ADD: EF? BE? AD? DE? AD? DF E2 FE  37 13 37 13 66 74 63 67   
-XOR: 76  58  B4  49  8D  1A 5F 38  D4 23 F8 34 EB 86 F9 AA   
-RES: 43  54  46  7B  53  X5 4D 43  66 30 72 4D 33 21 7D 00   
-```
-`4D` + `DF` = `1A` ^ `X5` = (`12C` & `FF`) = `2C`   
-`X5` = `36` => 6    
-```
-PRO: ++  ??  ??  ++  ??  ++ ++ ++  ++ ++ ++ ++ ++ ++ ++ ++   
-SRE: 46  4D  43  54  36  4D 30 7D  7B 00 53 66 72 33 21 43   
-ADD: EF? BE? AD? DE? AE  DF E2 FE  37 13 37 13 66 74 63 67   
-XOR: 76  58  B4  49  8D  1A 5F 38  D4 23 F8 34 EB 86 F9 AA   
-RES: 43  54  46  7B  53  36 4D 43  66 30 72 4D 33 21 7D 00   
+PRO: ++ ?? ?? ++ ?? ?? ?? ??  ++ ++ ++ ++ ++ ++ ++ ++   
+SRE: 46 X6 X7 54 X5 4D 30 7D  7B 00 53 66 72 33 21 43   
+ADD: EF BE AD DE AD DE E1 FE  37 13 37 13 66 74 63 67   
+XOR: 76 58 B4 49 8D 1A 5F 38  D4 23 F8 34 EB 86 F9 AA   
+RES: 43 54 46 7B 53 X5 X6 X7  66 30 72 4D 33 21 7D 00   
 ```
 
-> YET AGAIN SOMETHING GOT WRONG
-36 + AE != 8D ^ 53
+`46` + `EF` = `76` ^ `43` = `35` (`135`)
+and 1 carried to next byte
 
+```
+PRO: ++ ?? ?? ++ ?? ?? ?? ??  ++ ++ ++ ++ ++ ++ ++ ++   
+SRE: 46 X6 X7 54 X5 4D 30 7D  7B 00 53 66 72 33 21 43   
+ADD: EF BF AD DE AD DE E1 FE  37 13 37 13 66 74 63 67   
+XOR: 76 58 B4 49 8D 1A 5F 38  D4 23 F8 34 EB 86 F9 AA   
+RES: 43 54 46 7B 53 X5 X6 X7  66 30 72 4D 33 21 7D 00   
+```
 
+`X6` + `BF` = `58` ^ `54` = `0C`
+`X6` = `4D` => M
+> `X6` = `0C` - `BF` < 0, that means overflow happened and significant part of value carried to next byte and current one left with small value of `0C`
+```
+PRO: ++ ++ ?? ++ ?? ?? ?? ??  ++ ++ ++ ++ ++ ++ ++ ++   
+SRE: 46 4D X7 54 X5 4D 30 7D  7B 00 53 66 72 33 21 43   
+ADD: EF BF AE DE AD DE E1 FE  37 13 37 13 66 74 63 67   
+XOR: 76 58 B4 49 8D 1A 5F 38  D4 23 F8 34 EB 86 F9 AA   
+RES: 43 54 46 7B 53 X5 4D X7  66 30 72 4D 33 21 7D 00   
+```
+`X7` + `AE` = `B4` ^ `46` = `F2`
+`X7` = `F2` - `AE` = `44` => D  *no overflow this time*
 
-CTF{S6MCf0rM3!}
+```
+PRO: ++ ++ ++ ++ ?? ?? ?? ??  ++ ++ ++ ++ ++ ++ ++ ++   
+SRE: 46 4D 44 54 X5 4D 30 7D  7B 00 53 66 72 33 21 43   
+ADD: EF BF AE DE AD DE E1 FE  37 13 37 13 66 74 63 67   
+XOR: 76 58 B4 49 8D 1A 5F 38  D4 23 F8 34 EB 86 F9 AA   
+RES: 43 54 46 7B 53 X5 4D 44  66 30 72 4D 33 21 7D 00   
+```
+> ! `54` + `DE` = `49` ^ `7B` = `32`
 
+`X5` + `AD` = `8D` ^ `53` = `DE`
+`X5` = `DE` - `AD` = `31` => 1
+```
+PRO: ++ ++ ++ ++ ++ ?? ?? ??  ++ ++ ++ ++ ++ ++ ++ ++   
+SRE: 46 4D 44 54 31 4D 30 7D  7B 00 53 66 72 33 21 43   
+ADD: EF BF AE DE AD DE E1 FE  37 13 37 13 66 74 63 67   
+XOR: 76 58 B4 49 8D 1A 5F 38  D4 23 F8 34 EB 86 F9 AA   
+RES: 43 54 46 7B 53 31 4D 44  66 30 72 4D 33 21 7D 00   
+```
 
-4S
-56
-6M
-7C
-8f
-90
-Ar
-BM
-C3
-D!
-E}
+`4D` + `DE` = `1A` ^ `31`
+`2B` (`12B`) = `2B`
+
+```
+PRO: ++ ++ ++ ++ ++ ++ ?? ??  ++ ++ ++ ++ ++ ++ ++ ++   
+SRE: 46 4D 44 54 31 4D 30 7D  7B 00 53 66 72 33 21 43   
+ADD: EF BF AE DE AD DE E2 FE  37 13 37 13 66 74 63 67   
+XOR: 76 58 B4 49 8D 1A 5F 38  D4 23 F8 34 EB 86 F9 AA   
+RES: 43 54 46 7B 53 31 4D 44  66 30 72 4D 33 21 7D 00   
+```
+
+`30` + `E2` = `5F` ^ `4D`
+`12` (`112`) = `12`
+
+```
+PRO: ++ ++ ++ ++ ++ ++ ++ ??  ++ ++ ++ ++ ++ ++ ++ ++   
+SRE: 46 4D 44 54 31 4D 30 7D  7B 00 53 66 72 33 21 43   
+ADD: EF BF AE DE AD DE E2 FF  37 13 37 13 66 74 63 67   
+XOR: 76 58 B4 49 8D 1A 5F 38  D4 23 F8 34 EB 86 F9 AA   
+RES: 43 54 46 7B 53 31 4D 44  66 30 72 4D 33 21 7D 00   
+```
+
+`7D` + `FF` = `38` ^ `44`
+`7C` (`17C`) = `7C`
+> This particular carry goes nowhere as this is top byte in `QWORD`
+
+```
+PRO: ++ ++ ++ ++ ++ ++ ++ ++  ++ ++ ++ ++ ++ ++ ++ ++   
+SRE: 46 4D 44 54 31 4D 30 7D  7B 00 53 66 72 33 21 43   
+ADD: EF BF AE DE AD DE E2 FF  37 13 37 13 66 74 63 67   
+XOR: 76 58 B4 49 8D 1A 5F 38  D4 23 F8 34 EB 86 F9 AA   
+RES: 43 54 46 7B 53 31 4D 44  66 30 72 4D 33 21 7D 00   
+```
+
+Check left side of table with simple script used earlier
+```js
+[
+    [ 0x46, 0x4D, 0x44, 0x54, 0x31, 0x4D, 0x30, 0x7D ],
+    [ 0xEF, 0xBF, 0xAE, 0xDE, 0xAD, 0xDE, 0xE2, 0xFF ],
+    [ 0x76, 0x58, 0xB4, 0x49, 0x8D, 0x1A, 0x5F, 0x38 ],
+    [ 0x43, 0x54, 0x46, 0x7B, 0x53, 0x31, 0x4D, 0x44 ],
+]
+```
+
+```js
+for (let i = 0; i < 8; i++) {
+    let afterSum = a[0][i] + a[1][i];
+    let afterXor = a[2][i] ^ a[3][i];
+    let ok = ((afterSum - afterXor) & 0xFF) === 0;
+    console.log(`${i+1}: ${ok}`);
+}
+```
+
+All is ok, now time to compose whole flag and feed it to our program.
+
+Flag is: `CTF{S1MDf0rM3!}`
+
+>\> ./a.out     
+>Flag: CTF{S1MDf0rM3!}      
+>SUCCESS
+
